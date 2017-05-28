@@ -17,7 +17,7 @@ import datetime
 import logging
 import socket
 
-from .types import SmartDeviceException
+from .types import SmartDeviceException, NotSupportedException, SocketException
 from .protocol import TPLinkSmartHomeProtocol
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class SmartDevice(object):
                 request={target: {cmd: arg}}
             )
         except Exception as ex:
-            raise SmartDeviceException('Communication error') from ex
+            raise SocketException('Communication error') from ex
 
         if target not in response:
             raise SmartDeviceException("No required {} in response: {}"
@@ -70,6 +70,11 @@ class SmartDevice(object):
 
         result = response[target]
         if "err_code" in result and result["err_code"] != 0:
+            if result["err_code"] == -2001:
+                raise NotSupportedException(
+                    "This device does not support this feature"
+                )
+
             raise SmartDeviceException("Error on {}.{}: {}"
                                        .format(target, cmd, result))
 
